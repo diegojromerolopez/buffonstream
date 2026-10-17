@@ -1,0 +1,161 @@
+version: '3.8'
+
+services:
+  buffonstream:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+    environment:
+      - PORT=50051
+      - DATA_DIR=/app/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "50051"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  consumer-1:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      buffonstream:
+        condition: service_healthy
+    environment:
+      - SERVER_ADDR=buffonstream:50051
+      - CONSUMER_ID=consumer-1
+      - DURATION_SECONDS=300
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "===> Consumer-1 listening to live gRPC CDC stream..."
+        go test -v ./tests/e2e -run TestE2EConsumer
+
+  consumer-2:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      buffonstream:
+        condition: service_healthy
+    environment:
+      - SERVER_ADDR=buffonstream:50051
+      - CONSUMER_ID=consumer-2
+      - DURATION_SECONDS=300
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "===> Consumer-2 listening to live gRPC CDC stream..."
+        go test -v ./tests/e2e -run TestE2EConsumer
+
+  consumer-3:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      buffonstream:
+        condition: service_healthy
+    environment:
+      - SERVER_ADDR=buffonstream:50051
+      - CONSUMER_ID=consumer-3
+      - DURATION_SECONDS=300
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "===> Consumer-3 listening to live gRPC CDC stream..."
+        go test -v ./tests/e2e -run TestE2EConsumer
+
+  writer-1:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      buffonstream:
+        condition: service_healthy
+    environment:
+      - SERVER_ADDR=buffonstream:50051
+      - WRITER_ID=writer-1
+      - DURATION_SECONDS=300
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "===> Writer-1 pushing continuous Protobuf stream data..."
+        go test -v ./tests/e2e -run TestE2EWriter
+
+  writer-2:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      buffonstream:
+        condition: service_healthy
+    environment:
+      - SERVER_ADDR=buffonstream:50051
+      - WRITER_ID=writer-2
+      - DURATION_SECONDS=300
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "===> Writer-2 pushing continuous Protobuf stream data..."
+        go test -v ./tests/e2e -run TestE2EWriter
+
+  writer-3:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      buffonstream:
+        condition: service_healthy
+    environment:
+      - SERVER_ADDR=buffonstream:50051
+      - WRITER_ID=writer-3
+      - DURATION_SECONDS=300
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "===> Writer-3 pushing continuous Protobuf stream data..."
+        go test -v ./tests/e2e -run TestE2EWriter
+
+  e2e-runner:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      buffonstream:
+        condition: service_healthy
+      consumer-1:
+        condition: service_started
+      consumer-2:
+        condition: service_started
+      consumer-3:
+        condition: service_started
+      writer-1:
+        condition: service_started
+      writer-2:
+        condition: service_started
+      writer-3:
+        condition: service_started
+    environment:
+      - DURATION_SECONDS=300
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "========================================================================="
+        echo " Starting 5-Minute Multi-Producer / Multi-Consumer Streaming Stress Test"
+        echo " Duration: 300 Seconds (5 Minutes)"
+        echo " Writers: 3 concurrent stream producers"
+        echo " Consumers: 3 concurrent live gRPC CDC subscribers"
+        echo "========================================================================="
+        go test -v ./tests/e2e -run TestE2EOrchestrator
+        echo "========================================================================="
+        echo " SUCCESS: 5-Minute Multi-Client Protobuf CDC Test Completed Cleanly!"
+        echo "========================================================================="
