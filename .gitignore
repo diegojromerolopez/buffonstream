@@ -14,3 +14,19 @@ bin/
 dist/
 *.out
 *.test
+
+# Added by Noctifab pre-flight guardrails
+.noctifab/
+target/
+node_modules/
+build/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.bundle/
+*.class
+*.o
+*.so
+*.dylib
+*.log
